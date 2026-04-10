@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Password Strength Enforcer</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0d1117;
+      color: #e6edf3;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      padding: 36px;
+      width: 100%;
+      max-width: 520px;
+    }
+
+    h1 {
+      font-size: 1.4rem;
+      color: #58a6ff;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .subtitle {
+      font-size: 0.8rem;
+      color: #8b949e;
+      margin-bottom: 28px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      color: #8b949e;
+      margin-bottom: 8px;
+    }
+
+    .input-wrap {
+      position: relative;
+    }
+
+    input[type="password"], input[type="text"] {
+      width: 100%;
+      padding: 12px 44px 12px 14px;
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      color: #e6edf3;
+      font-size: 1rem;
+      outline: none;
+      transition: border 0.2s;
+    }
+
+    input:focus { border-color: #58a6ff; }
+
+    .toggle-eye {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      cursor: pointer;
+      color: #8b949e;
+      font-size: 1.1rem;
+      user-select: none;
+    }
+
+    /* ── Strength Meter ── */
+    .meter-wrap { margin: 16px 0 8px; }
+
+    .meter-bar {
+      height: 8px;
+      background: #21262d;
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .meter-fill {
+      height: 100%;
+      border-radius: 99px;
+      width: 0%;
+      transition: width 0.4s ease, background 0.4s ease;
+    }
+
+    .meter-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.78rem;
+      color: #8b949e;
+      margin-top: 6px;
+    }
+
+    .strength-text { font-weight: 600; }
+
+    /* ── Checklist ── */
+    .checklist {
+      margin: 16px 0;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .check-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.82rem;
+      color: #8b949e;
+      transition: color 0.2s;
+    }
+
+    .check-item.ok { color: #3fb950; }
+    .check-item.fail { color: #f85149; }
+
+    .check-icon {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 2px solid #30363d;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.65rem;
+      flex-shrink: 0;
+      transition: all 0.2s;
+    }
+
+    .check-item.ok .check-icon {
+      background: #3fb950;
+      border-color: #3fb950;
+      color: #000;
+    }
+
+    .check-item.fail .check-icon {
+      background: #f85149;
+      border-color: #f85149;
+      color: #fff;
+    }
+
+    /* ── Feedback tips ── */
+    .feedback-box {
+      background: #1c2128;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-bottom: 16px;
+      font-size: 0.82rem;
+      color: #e6edf3;
+      min-height: 44px;
+    }
+
+    .feedback-box ul { padding-left: 16px; }
+    .feedback-box li { margin-bottom: 4px; }
+
+    /* ── Buttons ── */
+    .btn-row { display: flex; gap: 10px; }
+
+    button {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    button:hover { opacity: 0.85; }
+
+    #btn-submit {
+      background: #238636;
+      color: #fff;
+    }
+
+    #btn-submit:disabled {
+      background: #21262d;
+      color: #484f58;
+      cursor: not-allowed;
+      opacity: 1;
+    }
+
+    #btn-bypass {
+      background: #da3633;
+      color: #fff;
+    }
+
+    /* ── Server response ── */
+    #server-response {
+      margin-top: 16px;
+      padding: 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      display: none;
+    }
+
+    #server-response.success {
+      background: #0f2a1a;
+      border: 1px solid #3fb950;
+      color: #3fb950;
+    }
+
+    #server-response.error {
+      background: #2a0f0f;
+      border: 1px solid #f85149;
+      color: #f85149;
+    }
+
+    /* ── AppSec note ── */
+    .appsec-note {
+      margin-top: 20px;
+      padding: 12px 14px;
+      background: #1c2128;
+      border-left: 3px solid #e3b341;
+      border-radius: 0 8px 8px 0;
+      font-size: 0.78rem;
+      color: #e3b341;
+      line-height: 1.5;
+    }
+  </style>
+  <link rel="pythonscript" href="app.py"
+  rel="pythonscript" href="password_analyser.py">
+</head>
+<body>
+<div class="container">
+
+  <h1>🔐 Password Enforcer</h1>
+  <p class="subtitle">Client vs Server Validation Demo</p>
+
+  <label for="pwd-input">Enter a password</label>
+  <div class="input-wrap">
+    <input type="password" id="pwd-input" placeholder="Type your password..." autocomplete="off" />
+    <span class="toggle-eye" id="toggle-eye" title="Show/hide">👁</span>
+  </div>
+
+  <!-- Strength Meter -->
+  <div class="meter-wrap">
+    <div class="meter-bar">
+      <div class="meter-fill" id="meter-fill"></div>
+    </div>
+    <div class="meter-label">
+      <span>Strength</span>
+      <span class="strength-text" id="strength-text">—</span>
+    </div>
+  </div>
+
+  <!-- Checklist -->
+  <div class="checklist">
+    <div class="check-item" id="chk-length">
+      <div class="check-icon">?</div> 8+ characters
+    </div>
+    <div class="check-item" id="chk-upper">
+      <div class="check-icon">?</div> Uppercase (A-Z)
+    </div>
+    <div class="check-item" id="chk-lower">
+      <div class="check-icon">?</div> Lowercase (a-z)
+    </div>
+    <div class="check-item" id="chk-digit">
+      <div class="check-icon">?</div> Number (0-9)
+    </div>
+    <div class="check-item" id="chk-special">
+      <div class="check-icon">?</div> Special char
+    </div>
+    <div class="check-item" id="chk-score">
+      <div class="check-icon">?</div> Score ≥ 50
+    </div>
+  </div>
+
+  <!-- Feedback -->
+  <div class="feedback-box" id="feedback-box">
+    Start typing to analyse your password...
+  </div>
+
+  <!-- Buttons -->
+  <div class="btn-row">
+    <button id="btn-submit" disabled>Submit to Server</button>
+    <button id="btn-bypass">⚠️ Bypass JS & Submit</button>
+  </div>
+
+  <!-- Server Response -->
+  <div id="server-response"></div>
+
+  <!-- AppSec Teaching Note -->
+  <div class="appsec-note">
+    <strong>AppSec Lesson:</strong> The green "Submit" button is disabled by JavaScript when the password is weak.
+    The red "Bypass JS" button simulates an attacker who disabled that JS check and submits anyway.
+    The <strong>server still rejects weak passwords</strong> — proving server-side enforcement is the real gate.
+  </div>
+
+</div>
+
+<script>
+  const input       = document.getElementById('pwd-input');
+  const meterFill   = document.getElementById('meter-fill');
+  const strengthTxt = document.getElementById('strength-text');
+  const feedbackBox = document.getElementById('feedback-box');
+  const btnSubmit   = document.getElementById('btn-submit');
+  const btnBypass   = document.getElementById('btn-bypass');
+  const serverResp  = document.getElementById('server-response');
+  const toggleEye   = document.getElementById('toggle-eye');
+
+  // ── Colour map ──
+  const colourMap = {
+    'Weak':       '#f85149',
+    'Moderate':   '#e3b341',
+    'Strong':     '#58a6ff',
+    'Very Strong':'#3fb950',
+    'Invalid':    '#f85149'
+  };
+
+  // ── Show / hide password ──
+  toggleEye.addEventListener('click', () => {
+    input.type = input.type === 'password' ? 'text' : 'password';
+  });
+
+  // ── Live analysis as user types ──
+  input.addEventListener('input', async () => {
+    const pwd = input.value;
+    serverResp.style.display = 'none';
+
+    if (!pwd) {
+      resetUI();
+      return;
+    }
+
+    // Call the server for live analysis
+    const res  = await fetch('/api/analyse', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pwd })
+    });
+    const data = await res.json();
+
+    updateMeter(data);
+    updateChecklist(data);
+    updateFeedback(data);
+
+    // JS enables submit only if passed — THIS is what an attacker bypasses
+    btnSubmit.disabled = !data.passed;
+  });
+
+  function updateMeter(data) {
+    const colour = colourMap[data.strength] || '#8b949e';
+    meterFill.style.width      = data.score + '%';
+    meterFill.style.background = colour;
+    strengthTxt.textContent    = data.strength + ' (' + data.score + '/100)';
+    strengthTxt.style.color    = colour;
+  }
+
+  function updateChecklist(data) {
+    const d = data.details;
+    setCheck('chk-length',  d.length >= 8);
+    setCheck('chk-upper',   d.has_uppercase);
+    setCheck('chk-lower',   d.has_lowercase);
+    setCheck('chk-digit',   d.has_digit);
+    setCheck('chk-special', d.has_special);
+    setCheck('chk-score',   data.score >= 50);
+  }
+
+  function setCheck(id, pass) {
+    const el   = document.getElementById(id);
+    const icon = el.querySelector('.check-icon');
+    el.className   = 'check-item ' + (pass ? 'ok' : 'fail');
+    icon.textContent = pass ? '✔' : '✘';
+  }
+
+  function updateFeedback(data) {
+    if (!data.feedback || data.feedback.length === 0) {
+      feedbackBox.innerHTML = '✅ Password meets all requirements!';
+      return;
+    }
+    feedbackBox.innerHTML = '<ul>' +
+      data.feedback.map(f => '<li>' + f + '</li>').join('') +
+      '</ul>';
+  }
+
+  function resetUI() {
+    meterFill.style.width = '0%';
+    strengthTxt.textContent = '—';
+    strengthTxt.style.color = '#8b949e';
+    feedbackBox.innerHTML = 'Start typing to analyse your password...';
+    btnSubmit.disabled = true;
+    ['chk-length','chk-upper','chk-lower','chk-digit','chk-special','chk-score'].forEach(id => {
+      const el = document.getElementById(id);
+      el.className = 'check-item';
+      el.querySelector('.check-icon').textContent = '?';
+    });
+  }
+
+  // ── Normal submit (JS gate is active) ──
+  btnSubmit.addEventListener('click', () => submitToServer(false));
+
+  // ── Bypass submit (simulates attacker disabling JS) ──
+  // Notice: we call the SAME endpoint with whatever is in the field
+  // A real attacker would use curl or Burp Suite — same effect
+  btnBypass.addEventListener('click', () => submitToServer(true));
+
+  async function submitToServer(isBypass) {
+    const pwd = input.value;
+    serverResp.style.display = 'none';
+
+    const res = await fetch('/api/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pwd })
+    });
+
+    const data = await res.json();
+
+    serverResp.style.display = 'block';
+    if (data.success) {
+      serverResp.className   = 'success';
+      serverResp.innerHTML   = '🟢 ' + data.message;
+    } else {
+      serverResp.className   = 'error';
+      let html = '🔴 ' + data.message;
+      if (isBypass) {
+        html += '<br><br><strong>This is what happens when an attacker bypasses your JS:</strong><br>';
+        html += 'Score: ' + data.score + '/100<br>';
+        html += (data.feedback || []).join('<br>');
+      }
+      serverResp.innerHTML = html;
+    }
+  }
+</script>
+</body>
+</html>
